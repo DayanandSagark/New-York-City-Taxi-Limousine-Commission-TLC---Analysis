@@ -1,0 +1,748 @@
+﻿-- New York City Taxi & Limousine Commission (TLC)  Project
+
+
+-- Pre requisite
+ADD JAR /opt/cloudera/parcels/CDH/lib/hive/lib/hive-hcatalog-core-1.1.0-cdh5.11.2.jar;
+SET hive.exec.max.dynamic.partitions=100000;
+SET hive.exec.max.dynamic.partitions.pernode=100000;
+
+
+-- Create the workspace
+
+
+Create database if not exists  anto_daya_assignment;
+use  anto_daya_assignment;
+
+---- Loading base table from HDFS file storage location '/common_folder/nyc_taxi_data/'
+
+create external table if not exists anto_daya_assignment.nyc_base_csv(
+VendorID int,
+tpep_pickup_datetime timestamp,
+tpep_dropoff_datetime timestamp,
+passenger_count int,
+trip_distance decimal(10,2),
+RatecodeID int,
+store_and_fwd_flag string,
+PULocationID int,
+DOLocationID int,
+payment_type int,
+fare_amount decimal(10,2),
+extra decimal(10,2),
+mta_tax decimal(10,2),
+tip_amount decimal(10,2),
+tolls_amount decimal(10,2),
+improvement_surcharge decimal(10,2),
+total_amount decimal(10,2)
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION '/common_folder/nyc_taxi_data/'
+tblproperties ("skip.header.line.count"="1"); 
+-- skipping the header row
+
+
+-- Querying table for checking
+
+select * from anto_daya_assignment.nyc_base_csv;
+select count(*) from anto_daya_assignment.nyc_base_csv;
+
+-- 1174569 records
+
+-- Basic data qualiy checks
+
+--1.How many records has each TPEP provider provided? Write a query that summarises the number of records of each provider.
+
+select VendorID,count(VendorID) as summary_count from anto_daya_assignment.nyc_base_csv group by VendorID;
+
+--2 - 647183
+--1 - 527386
+
+--Vendor 2 is higher than vendor 1
+
+--2.The data provided is for months November and December only. Check whether the data is consistent, and if not, identify the data quality issues. Mention all data quality issues in comments.
+ -- Check for null values in table across all columns
+ 
+select sum(case when 	VendorID 	 is null then 1 else 0 end) 	VendorID 	,
+sum(case when 	tpep_pickup_datetime 	 is null then 1 else 0 end) 	tpep_pickup_datetime 	,
+sum(case when 	tpep_dropoff_datetime 	 is null then 1 else 0 end) 	tpep_dropoff_datetime 	,
+sum(case when 	passenger_count 	 is null then 1 else 0 end) 	passenger_count 	,
+sum(case when 	trip_distance 	 is null then 1 else 0 end) 	trip_distance 	,
+sum(case when 	RatecodeID 	 is null then 1 else 0 end) 	RatecodeID 	,
+sum(case when 	store_and_fwd_flag 	 is null then 1 else 0 end) 	store_and_fwd_flag 	,
+sum(case when 	PULocationID 	 is null then 1 else 0 end) 	PULocationID 	,
+sum(case when 	DOLocationID 	 is null then 1 else 0 end) 	DOLocationID 	,
+sum(case when 	payment_type 	 is null then 1 else 0 end) 	payment_type 	,
+sum(case when 	fare_amount 	 is null then 1 else 0 end) 	fare_amount 	,
+sum(case when 	extra 	 is null then 1 else 0 end) 	extra 	,
+sum(case when 	mta_tax 	 is null then 1 else 0 end) 	mta_tax 	,
+sum(case when 	tip_amount 	 is null then 1 else 0 end) 	tip_amount 	,
+sum(case when 	tolls_amount 	 is null then 1 else 0 end) 	tolls_amount 	,
+sum(case when 	improvement_surcharge 	 is null then 1 else 0 end) 	improvement_surcharge 	,
+sum(case when 	total_amount 	 is null then 1 else 0 end) 	total_amount 	
+from anto_daya_assignment.nyc_base_csv;
+
+-- no null values in the table across columns
+
+-- Chcking each columnas per data dictionary
+select max(VendorID ) max_VendorID	,	min(VendorID ) min_VendorID	,
+max(tpep_pickup_datetime ) max_tpep_pickup_datetime	,	min(tpep_pickup_datetime ) min_tpep_pickup_datetime	,
+max(tpep_dropoff_datetime ) max_tpep_dropoff_datetime	,	min(tpep_dropoff_datetime ) min_tpep_dropoff_datetime	,
+max(passenger_count ) max_passenger_count	,	min(passenger_count ) min_passenger_count	,
+max(trip_distance ) max_trip_distance	,	min(trip_distance ) min_trip_distance	,
+max(RatecodeID ) max_RatecodeID	,	min(RatecodeID ) min_RatecodeID	,
+max(store_and_fwd_flag ) max_store_and_fwd_flag	,	min(store_and_fwd_flag ) min_store_and_fwd_flag	,
+max(PULocationID ) max_PULocationID	,	min(PULocationID ) min_PULocationID	,
+max(DOLocationID ) max_DOLocationID	,	min(DOLocationID ) min_DOLocationID	,
+max(payment_type ) max_payment_type	,	min(payment_type ) min_payment_type	,
+max(fare_amount ) max_fare_amount	,	min(fare_amount ) min_fare_amount	,
+max(extra ) max_extra	,	min(extra ) min_extra	,
+max(mta_tax ) max_mta_tax	,	min(mta_tax ) min_mta_tax	,
+max(tip_amount ) max_tip_amount	,	min(tip_amount ) min_tip_amount	,
+max(tolls_amount ) max_tolls_amount	,	min(tolls_amount ) min_tolls_amount	,
+max(improvement_surcharge ) max_improvement_surcharge	,	min(improvement_surcharge ) min_improvement_surcharge	,
+max(total_amount ) max_total_amount	,	min(total_amount ) min_total_amount		
+from anto_daya_assignment.nyc_base_csv;
+---
+--max_vendorid	2
+--min_vendorid	1
+--Vendorid is fine
+max_tpep_pickup_datetime	2018-01-01 00:04:00.0
+min_tpep_pickup_datetime	2003-01-01 00:58:00.0
+
+-- need to remove the pickup and dropoff time as we need only two months dates nov and dec of 2017
+
+max_tpep_dropoff_datetime	2019-04-24 19:21:00.0
+min_tpep_dropoff_datetime	2003-01-01 01:28:00.0
+
+-- need to remove the pickup and dropoff time as we need only two months dates nov and dec of 2017
+--max_passenger_count	9
+--min_passenger_count	0
+--min passenger count =0-- driver not intersted to share
+--max passenger count -9 -- data entry error
+
+--max_trip_distance	126.41
+--min_trip_distance	0
+--data entry miss for trip distance 0
+--max_ratecodeid	99
+--min_ratecodeid	1
+--ratecodeid is fine
+--max_store_and_fwd_flag	Y
+--min_store_and_fwd_flag	N
+-- store_and_fwd_flag is fine
+--max_pulocationid	265
+--min_pulocationid	1
+--max_dolocationid	265
+--min_dolocationid	1
+--location id is fine
+--max_payment_type	4
+--min_payment_type	1
+--paymemt id is 1-6 but its fine
+--max_fare_amount	650
+--min_fare_amount	-200
+--fare amount negative may be dta entry error
+--max_extra	4.8
+--min_extra	-10.6
+--max_mta_tax	11.4
+--min_mta_tax	-0.5
+--max_tip_amount	450
+--min_tip_amount	-1.16
+--max_tolls_amount	895.89
+--min_tolls_amount	-5.76
+--max_improvement_surcharge	1
+--min_improvement_surcharge	-0.3
+--max_total_amount	928.19
+--min_total_amount	-200.8
+-- amount in negative is a data enry error
+
+--Now going with individual columns 
+-- Go with pckup and drop off dates, check rows other than nov 2017 and dec 2017
+---- any day before 1-nov-2017 and after 31-dec-2017(represent as >= 1-jan-2018) is not in our scope
+
+select count(*) as outofmnt from  anto_daya_assignment.nyc_base_csv 
+where tpep_pickup_datetime < '2017-11-01 00:00:00.0' or tpep_pickup_datetime>='2018-01-01 00:00:00.0';
+
+--14 rows are out of scope
+
+select count(*) from  anto_daya_assignment.nyc_base_csv 
+where tpep_dropoff_datetime < '2017-11-1 00:00:00.0' or tpep_dropoff_datetime>='2018-01-02 00:00:00.0';
+
+-- 7 rows are out of scope
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv  
+where tpep_dropoff_datetime < '2017-11-1 00:00:00.0' or tpep_dropoff_datetime>='2018-01-02 00:00:00.0'
+group by vendorid;
+
+--Vendor2-6
+--Vendor1-1
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv  
+where tpep_pickup_datetime < '2017-11-1 00:00:00.0' or tpep_pickup_datetime>='2018-01-02 00:00:00.0'
+group by vendorid;
+
+--vendor 2 - 10
+--no records on vendor1
+--lets check for vendor 1
+
+select * from  anto_daya_assignment.nyc_base_csv 
+where (tpep_pickup_datetime < '2017-11-1 00:00:00.0' or tpep_pickup_datetime>='2018-01-02 00:00:00.0')
+and vendorid=1;
+
+--no vendor 1 details on pick up dates out of scope
+
+select * from  anto_daya_assignment.nyc_base_csv 
+where (tpep_dropoff_datetime < '2017-11-1 00:00:00.0' or tpep_dropoff_datetime>='2018-01-02 00:00:00.0')
+and vendorid=1;
+
+-- Vendor 1 is having 1 record out of scope for drop off dates
+
+-- Check the dates where pick up time is greater than drop off time
+
+select count(*) from anto_daya_assignment.nyc_base_csv 
+where tpep_dropoff_datetime<=tpep_pickup_datetime;
+
+--6555 records are having pick up time greater than or equal to drop off time..which is data issue
+-- Now check that by vendor id
+
+select vendorid,count(*) from anto_daya_assignment.nyc_base_csv 
+where tpep_dropoff_datetime<=tpep_pickup_datetime 
+group by vendorid;
+vendor1 - - 3492
+vendor2 - 2063
+
+-- Vendor1 is more faulty w.r.t drop of time less than are equal to pickup time
+-- Pick up and drop off dates done
+
+-- Now passenger count
+select passenger_count,count(*) as pasg_count from anto_daya_assignment.nyc_base_csv 
+group by passenger_count;
+
+
+-- 	passenger_count	pasg_count
+--	0	6824
+--	2	176872
+--	4	24951
+--	6	33146
+--	8	3
+--	1	827499
+--	3	50693
+--	5	54568
+--	7	12
+--	9	1
+
+-- passenger count for 7,8,9 range is very less, may be data entry error
+-- passenber count zero is having good volume may be driver is not interested in sharing the details of psg_count
+-- Let's check based on vendor
+
+select vendorid,passenger_count, count(*) 
+from  anto_daya_assignment.nyc_base_csv 
+where passenger_count in  (0,7,8,9) group by vendorid,passenger_count
+order by passenger_count,vendorid;
+
+
+-- 	vendorid	passenger_count	_c2
+--	1	0	6813
+--	2	0	11
+--	1	7	1
+--	2	7	11
+--	2	8	3
+--	2	9	1
+
+-- Vendor 1 is causing more data descrepency for passenger count zero
+
+-- ## Trip distance
+-- max_trip_distance	126.41
+--min_trip_distance	0
+-- # the elapsed time
+
+select count(*) from  anto_daya_assignment.nyc_base_csv 
+where trip_distance<=0 
+
+--7402
+
+select vendorid,trip_distance, count(*) from  anto_daya_assignment.nyc_base_csv 
+where trip_distance<=0 
+group by vendorid,trip_distance;
+
+
+-- 	vendorid	trip_distance	_c2
+--	2	0	3185
+--	1	0	4217
+
+-- Vendor 2 is more tripdistance added with zero than vendor 1
+
+-- ## ratecodeid
+
+select  ratecodeid,count(*) 
+from  anto_daya_assignment.nyc_base_csv 
+group by ratecodeid;
+
+--	ratecodeid	count
+--	2	25338
+--	4	586
+--	6	3
+--	1	1142278
+--	3	2562
+--	5	3793
+--	99	9
+
+-- 99 rate code id is not available in data disctionary
+
+select vendorid , count(*) 
+from  anto_daya_assignment.nyc_base_csv 
+where ratecodeid=99
+group by vendorid;
+
+-- 	vendorid	_c1
+--	2	1
+--	1	8
+
+-- Vendor 1 is doing more data error on rate code =99
+
+--store_and_fwd_flag ######################################################
+
+select  store_and_fwd_flag,count(*) 
+from  anto_daya_assignment.nyc_base_csv
+group by store_and_fwd_flag;
+
+-- store_fwd_flagg is fine with no issues
+
+--## Fare_amount
+
+select percentile_approx(fare_amount,array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,0.99)) 
+from  anto_daya_assignment.nyc_base_csv;
+-- [4.9362761547186045,5.95224629937812,6.922507828953393,7.970872398404486,9.390657514976596,10.927986060161409,12.998788593388356,16.81235867121--8053,24.852212075088794,51.958303751465415]
+-- these values are acceptable lets tru a smaller percentile value
+
+select percentile_approx(fare_amount,array(0.01,0.999)) 
+from  anto_daya_assignment.nyc_base_csv;
+
+-- [3.2616104886694517,88.10262750000518]
+-- even these values are within range
+-- seems like the negative values and very high values are wrong data or outliner.
+-- we can easily ignore negative values
+
+select count(*) from  anto_daya_assignment.nyc_base_csv where fare_amount<0;
+
+-- 558 negative values
+--  lets find a upper limit for these fare values
+
+select vendorid ,count(*)
+from  anto_daya_assignment.nyc_base_csv
+where fare_amount<0  group by vendorid;
+
+-- 2	558
+-- Vendor 2 is having the corrupt data on fare amountt
+
+-- ###extra 
+--max_extra	4.8
+--min_extra	-10.6
+-- But data disctionary says :-Miscellaneous extras and surcharges. 
+-- Currently, this only includes the $0.50 and $1 rush hour and overnight charges.
+-- hence we will reject these values let's verify their count
+
+select count(*) from  anto_daya_assignment.nyc_base_csv where extra not in (0,0.5,1);
+
+-- 4856
+
+select 4856/1174569;
+
+-- 0.00413428244743391 this data can be safely ignored
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv where extra not in (0,0.5,1)
+ group by vendorid;
+
+-- 	vendorid	_c1
+--	2	3033
+--	1	1823
+-- both vendors seems to at fault
+-- mta_tax  #################################################
+-- max_mta_tax	11.4
+-- min_mta_tax	-0.5
+-- Data Dictionary :-$0.50 MTA tax that is automatically triggered based on the metered rate in use.
+
+select count(*) from  anto_daya_assignment.nyc_base_csv where mta_tax not in (0,0.5);
+-- 548
+select 548/1174569;
+
+--0.0004 smaller set, based on data disctionary we would ignore these
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv 
+where mta_tax not in (0,0.5) group by vendorid;
+
+-- Both vendor are equally responsible, 
+
+-- 	vendorid	_c1
+--	2	547
+--	1	1
+-- Vendor 2 is again majorly at fault
+
+
+-- tip_amount ###############################################################
+-- max_tip_amount	450
+-- min_tip_amount	-1.16
+-- Data dictionary - Tip amount – This field is automatically populated for credit card tips. 
+-- Cash tips are not included.
+-- negative values
+select count(*) from  anto_daya_assignment.nyc_base_csv where tip_amount <0;
+-- only 4 values are negative can be easily be ignored
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv 
+where tip_amount <0 group by vendorid;
+
+-- all faulty with vendor 2
+
+-- Let's chek if their are non credit card based tips
+
+select count(*) from anto_daya_assignment.nyc_base_csv
+where Payment_type!=1 and tip_amount>0;
+
+-- 17 records have payment mode other than credit and still have tip amount greate than 0
+-- we will ignore these records to sanity as well.
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv
+where Payment_type!=1 and tip_amount>0  group by vendorid;
+
+-- 17 records
+-- All records belong to vendor 1
+-- we will remove these records as well
+-- tolls_amount ################################################################
+
+-- max_tolls_amount	895.89
+-- min_tolls_amount	-5.76
+-- Data Dictionary:- Total amount of all tolls paid in trip. 
+-- The value can't be negative
+
+select count(*) from  anto_daya_assignment.nyc_base_csv where tolls_amount <0;
+
+-- only 3 records can be safely ignored
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv 
+where tolls_amount <0
+group by vendorid;
+
+-- All belong to vendor 2
+
+-- improvement_surcharge#################################################
+-- max_improvement_surcharge	1
+-- min_improvement_surcharge	-0.3
+-- Data Dictionary :- $0.30 improvement surcharge assessed trips at the flag drop. 
+-- The improvement surcharge began being levied in 2015. 
+select count(*) from  anto_daya_assignment.nyc_base_csv where improvement_surcharge not in (0,0.3);
+
+-- only 562  can be easily ignored
+-- vendor wise
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv 
+where improvement_surcharge not in (0,0.3) 
+group by vendorid;
+
+-- All records belong to vendor 2
+
+
+-- total_amount #####################################################################
+-- max_total_amount	928.19
+-- min_total_amount	-200.8
+-- Data Dictionary:-  The total amount charged to passengers. Does not include cash tips
+-- can be negative and has similar high value as fare_amount, we will check this with similar queries
+select count(*) from  anto_daya_assignment.nyc_base_csv where total_amount<0;
+-- 558 can be easily ignored
+-- All records belong to vendor 2
+
+select vendorid,count(*) from  anto_daya_assignment.nyc_base_csv 
+where  total_amount<0 
+group by vendorid;
+-- 1	9
+-- 2	9374
+-- Group 2 highly dominate in the corrupt data section
+
+
+-- Basic Data Quality Checks ###########################################
+
+-- 3.You might have encountered unusual or erroneous rows in the dataset. 
+-- Can you conclude which vendor is doing a bad job in providing the records using different columns of the dataset? Summarise your conclusions based on every column where these errors are present.
+-- For example,  There are unusual passenger count i.e 0 or 192 which is unusual.
+
+-- For the data It's mostly vendor 2 that is providing faulty data.
+-- Below is the list of problemtic data they have provided column wise
+-- invalid values for 1.total_amount , 2.improvement_surcharge,3.tolls_amount, 4.tip_amount,mta_tax, 
+--  5.fare_amount
+-- ####################################
+
+-- Vendor 1 for has few tip amount where the payment mode is not credit card
+-- 1.passenger_count, 2.pickup and 3.drop off time
+-- ##########################################################
+-- But overall Vendor 2 is definately not providing correct data.
+
+--###############################################################################################################
+
+
+-- Need to create a clean, ORC partitioned table for analysis. Remove all the erroneous rows.
+-- We will be partitioning on the month column first as we need to answer question comparing between the two
+-- since we expect only two month data to pass -- year filter is not taken into consideration
+
+-- The second partition should be with vendorid as most of questions we are analysing based on vendor as well
+
+-- drop table anto_daya_assignment.nyc_orc_partition_data;
+Create external table if not exists anto_daya_assignment.nyc_orc_partition_data(
+tpep_pickup_datetime timestamp,
+tpep_dropoff_datetime timestamp,
+passenger_count int,
+trip_distance decimal(10,2),
+RatecodeID int,
+store_and_fwd_flag string,
+PULocationID int,
+DOLocationID int,
+payment_type int,
+fare_amount decimal(10,2),
+extra decimal(10,2),
+mta_tax decimal(10,2),
+tip_amount decimal(10,2),
+tolls_amount decimal(10,2),
+improvement_surcharge decimal(10,2),
+total_amount decimal(10,2)
+)
+partitioned by (Mnth int,VendorID int)
+stored as orc location '/user/dayanand_87_yahoo/nyc_hive_assignment/'
+tblproperties ("orc.compress"="SNAPPY");
+
+-- Inserting data and removing error rows
+insert overwrite table anto_daya_assignment.nyc_orc_partition_data partition(Mnth,VendorID)
+select 
+tpep_pickup_datetime,
+tpep_dropoff_datetime,
+passenger_count,
+trip_distance,
+RatecodeID,
+store_and_fwd_flag,
+PULocationID,
+DOLocationID,
+payment_type,
+fare_amount,
+extra,
+mta_tax,
+tip_amount,
+tolls_amount,
+improvement_surcharge,
+total_amount,
+month(tpep_pickup_datetime) Mnth,
+VendorID
+from  anto_daya_assignment.nyc_base_csv
+where  (tpep_pickup_datetime >='2017-11-1 00:00:00.0' and tpep_pickup_datetime<'2018-01-01 00:00:00.0') and
+(tpep_dropoff_datetime >= '2017-11-1 00:00:00.0' and tpep_dropoff_datetime<'2018-01-02 00:00:00.0') and
+(tpep_dropoff_datetime>tpep_pickup_datetime) and
+(passenger_count not in (0,192)) and
+(trip_distance>0) and 
+(ratecodeid!=99) and
+(fare_amount>0 ) and
+ (extra in (0,0.5,1)) and
+ (mta_tax  in (0,0.5)) and 
+((tip_amount >=0 and Payment_type=1) or (Payment_type!=1 and tip_amount=0)) and
+( tolls_amount >=0) and
+( improvement_surcharge in (0,0.3)) and
+(total_amount>0 ) ;
+
+-- rows removed:  1153587 - 1174569 = 20982
+
+
+--###Analysis-I
+
+##1. Compare the overall average fare per trip for November and December.
+
+ADD JAR /opt/cloudera/parcels/CDH/lib/hive/lib/hive-hcatalog-core-1.1.0-cdh5.11.2.jar;
+SET hive.exec.max.dynamic.partitions=100000;
+SET hive.exec.max.dynamic.partitions.pernode=100000;
+
+use anto_daya_assignment;
+
+select mnth,round(avg(total_amount),2) as avg_total_amt,round(avg(fare_amount),2) as avg_fare_amount
+from anto_daya_assignment.nyc_orc_partition_data  group by mnth;
+
+-- 	mnth	avg_total_amt	avg_fare_amount
+--	11	16.19	12.91
+--	12	15.89	12.7
+--select 16.19-15.9, 12.9-12.71;
+--o.29 and 0.18
+-- Novemeber seems to be better considering total amount.
+-- Also the difference in fare amount avg is on the lower side when compared to total amount
+-- this signifies that exta tax and charges are also coming in play during the month of November
+
+-- 2. Explore the ‘number of passengers per trip’ - how many trips are made by each level of ‘Passenger_count’? 
+-- Do most people travel solo or with other people?
+
+select count(*) as total_trips from anto_daya_assignment.nyc_orc_partition_data;
+-- 1153587
+--Now calculating the percentage of trips done by each passenger count;
+select passenger_count,round((count(*)*100/1153587),2) as percentage_trip_cnt
+from anto_daya_assignment.nyc_orc_partition_data
+group by passenger_count;
+
+--	1   70.82
+--	2	15.15
+--	3	4.35
+--	4	2.14
+--	5	4.68
+--	6	2.85
+-- 71 percentage of trips goes with solo passenger 
+-- 15 percentage are with dual passenger count
+-- the remaing are very less below 5 percent
+
+--### 3.Which is the most preferred mode of payment? 
+select payment_type,round((count(*)*100/1153587),2) cnt
+from anto_daya_assignment.nyc_orc_partition_data  group by payment_type
+-- order by cnt desc;
+-- 	1   67.54
+-- 	2	31.96
+-- 	3	0.39
+-- 	4	0.11
+-- Credit card pays are dominant with 67.5% and cash payment are 2nd highest paymnet 32%
+-- rest all modes are negligable
+-- 5 & 6 are not existance as previsously seen.
+
+--### 4.What is the average tip paid per trip? 
+-- Compare the average tip with the 25th, 50th and 75th percentiles and 
+-- comment whether the ‘average tip’ is a representative statistic (of the central tendency) of ‘tip amount paid’. 
+-- Hint: You may use percentile_approx(DOUBLE col, p): 
+-- Returns an approximate pth percentile of a numeric column (including floating point types) in the group.
+
+select round(avg(tip_amount),2) as avg_tip_amt
+from anto_daya_assignment.nyc_orc_partition_data;
+
+-- 1.83
+select percentile_approx(tip_amount,array(0.25,0.40,0.45,0.50,0.60,0.65,0.75))  
+from anto_daya_assignment.nyc_orc_partition_data;
+
+--   25%, 0.40, 0.45, 50%,  60%,  65%,  75%
+-- 	[0.0, 1.0 , 1.15, 1.36, 1.76, 1.997, 2.45]
+-- From the above percentile values, data is skewed towards the higher side.
+-- 25% or more values bein zero tip.
+-- again the median 1.36 is much lower then the avg 1.83 due to the skewness towards higher values
+-- Hence mean is not correct statistic of centeral tendency here.
+-- It woulsd be advised to use median instead of mean for this particular column during analysis
+
+-- ## 5. Explore the ‘Extra’ (charge) variable - what fraction of total trips have an extra charge is levied? 
+select extra,round((count(*)*100/1153587),2) cnt from (
+select case when extra>0 then 1 else 0 end  extra
+from anto_daya_assignment.nyc_orc_partition_data ) T
+group by extra
+order by cnt desc;
+
+--  	extra	%cnt
+-- 	0	53.85
+-- 	1	46.15
+-- The distribusion is with 46.15% records having extra charges applied , where as  53.85% have no extra charges applied
+
+
+--## Analysis -2
+
+
+
+-- 1. What is the correlation between the number of passengers on any given trip, and the tip paid per trip? 
+--    Do multiple travellers tip more compared to solo travellers? Hint: Use CORR(Col_1, Col_2)
+select round(corr(passenger_count, tip_amount),4) from anto_daya_assignment.nyc_orc_partition_data;
+-- -0.0053
+-- the value is very small although negative and  passenger count is unrealated to the tip amount paid.
+select round(corr(is_solo, tip_amount),4) from 
+(select case when passenger_count=1 then 1 else 0 end is_solo,tip_amount 
+from anto_daya_assignment.nyc_orc_partition_data ) T;
+-- 0.0062, comparing only single vs multiple rider count their is still very low co-relation
+select is_solo,round(avg(tip_amount),4) from 
+(select case when passenger_count=1 then 1 else 0 end is_solo,tip_amount 
+from anto_daya_assignment.nyc_orc_partition_data) T group by is_solo;
+
+--  	is_solo	_c1
+-- 	0	1.8023
+-- 	1	1.8354
+-- The Values are almost same 
+
+
+--####2. Segregate the data into five segments of ‘tip paid’: [0-5), [5-10), [10-15) , [15-20) and >=20.
+--    Calculate the percentage share of each bucket (i.e. the fraction of trips falling in each bucket).
+select Tip_range, round((count(*)*100/1153587),4) cnt
+from (select
+case when (tip_amount>=0 and tip_amount<5)   then '[0-5)' 
+     when (tip_amount>=5 and tip_amount<10)  then '[5-10)' 
+     when (tip_amount>=10 and tip_amount<15) then '[10-15)'
+     when (tip_amount>=15 and tip_amount<20) then '[15-20)'
+     when (tip_amount>=20)                   then '>=20' end Tip_range
+     from anto_daya_assignment.nyc_orc_partition_data) T 
+     group by Tip_range
+     order by cnt desc;
+
+--  	tip_range	cnt
+-- 	[0-5)	92.4038
+-- 	[5-10)	5.638
+-- 	[10-15)	1.6829
+-- 	[15-20)	0.1872
+-- 	>=20	0.0881
+-- 0-5 range is the most prominate group with 92.4% records, we already know 25%+ of these are 0 values from teh precious percentile based check
+-- 5-10 represening a small fraction of 5.6%, remaning set are almost neglihgble amount to 2% of data
+
+-- 3.Which month has a greater average ‘speed’ - November or December? ##################################################
+-- Note that the variable ‘speed’ will have to be derived from other metrics.
+-- Hint: You have columns for distance and time.
+
+-- we will calculate duration by subracting drop of time with pick up time, since we are using unix timestamp function(as direct suntraction of timestamp column didn't work)
+-- values will be returned in sec hence we will be dividing it by 3600 to get valuesin hour
+-- since distance is spsecified in miles out final value will be in miles/hour unit
+
+select mnth , round(avg(trip_distance/((unix_timestamp(tpep_dropoff_datetime)-unix_timestamp(tpep_pickup_datetime) )/3600) ),2) avg_speed
+from anto_daya_assignment.nyc_orc_partition_data
+group by mnth
+order by avg_speed desc;
+--  	11	10.97
+--	12	11.07
+-- december month is marginally faster by 0.10 miles/hour
+-- this is expected that during the holiday seasons of december taxi traffic is low
+-- but the minimilatic difference represents that NewYork never rest it works even through its holiday season
+
+-- 4.Analyse the average speed of the most happening days of the year, #########################################################################################
+-- i.e. 31st December (New year’s eve) and 25th December (Christmas Eve)
+-- and compare it with the overall average. 
+
+-- any trip that started on 25th or 31 will be considerd for teh avg calculation irrespective of the fact that it might have ended on the next day
+select IsHoliday, round(avg(speed),2) avg_speed from 
+(select case when ((tpep_pickup_datetime>='2017-12-25 00:00:00.0' and tpep_pickup_datetime<'2017-12-26 00:00:00.0') 
+or (tpep_pickup_datetime>='2017-12-31 00:00:00.0' and tpep_pickup_datetime<'2018-01-01 00:00:00.0')  ) then 1 else 0 end IsHoliday   , 
+trip_distance/((unix_timestamp(tpep_dropoff_datetime)-unix_timestamp(tpep_pickup_datetime) )/3600) speed
+from anto_daya_assignment.nyc_orc_partition_data) T
+group by IsHoliday
+order by avg_speed desc;
+
+-- 1	14.01
+-- 0	10.95
+select 14.01-10.95;
+
+-- The comparision between holiday vs non-holiday , the during the holiday atleast the streets of New York are clear(er)
+-- as the Cab's are running at a faster average speed by a margin of  3.06 miles/hour
+-- The non festive day average is in sync with november and december averages at around 10.95 miles/per hour
+-- let's confirm teh overall averages once
+select round(avg(trip_distance/((unix_timestamp(tpep_dropoff_datetime)-unix_timestamp(tpep_pickup_datetime) )/3600)),2) avg_speed
+from anto_daya_assignment.nyc_orc_partition_data;
+-- 11.02 is the overall avg speed as expected so the faster speed on 25th and 31 dec amounts to 3.00(14.01 was for non holiday days) increment on the overall speed 
+
+-- Let's compare individual days too
+-- christmas
+select Day_type,round(avg(trip_distance/((unix_timestamp(tpep_dropoff_datetime)-unix_timestamp(tpep_pickup_datetime) )/3600)),2) avg_speed
+from ( 
+select trip_distance,tpep_dropoff_datetime,tpep_pickup_datetime,
+case when ((tpep_pickup_datetime>='2017-12-25 00:00:00.0' and tpep_pickup_datetime<'2017-12-26 00:00:00.0')) then 1
+when ((tpep_pickup_datetime>='2017-12-31 00:00:00.0' and tpep_pickup_datetime<'2018-01-01 00:00:00.0')  ) then 2 else 0 end Day_type 
+from anto_daya_assignment.nyc_orc_partition_data
+) T
+group by Day_type;
+
+--  0	10.95 rest of the days
+--	1	15.27 Chritsmas
+--  2	13.24 new year eve
+-- The fasted avg speed is oberved on chrismat day @ 15.27 miles/hour; 2.03 miles/hour faster than new year eve mark of 13.24 miles/hour
+-- The result represent similar value to the combined is-holiday data i.e. Both are indidvidually much faster than the average time taken on other days  
+
+
+
+
+
+
+
+
+
+
+
